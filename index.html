@@ -58,15 +58,15 @@
     const carrusel = document.getElementById('carrusel');
 
     const imagenesMillonario = [
-      'https://cdn.pixabay.com/photo/2015/03/26/09/54/rolls-royce-690832_1280.jpg',
-      'https://cdn.pixabay.com/photo/2016/11/29/04/17/mansion-1867187_1280.jpg',
-      'https://cdn.pixabay.com/photo/2015/01/08/18/27/yacht-593162_1280.jpg'
+      'millonario1.jpg',
+      'millonario2.jpg',
+      'millonario3.jpg'
     ];
 
     const imagenesPobre = [
-      'https://cdn.pixabay.com/photo/2017/01/06/19/15/people-1957318_1280.jpg',
-      'https://cdn.pixabay.com/photo/2017/01/06/19/15/people-1957319_1280.jpg',
-      'https://cdn.pixabay.com/photo/2017/01/06/19/15/people-1957320_1280.jpg'
+      'pobre1.jpg',
+      'pobre2.jpg',
+      'pobre3.jpg'
     ];
 
     boton.onclick = async () => {
@@ -162,6 +162,16 @@
       imagenes.forEach((src, index) => {
         const img = document.createElement('img');
         img.src = src;
-        if (index
-::contentReference[oaicite:3]{index=3}
+        if (index === 0) img.classList.add('active');
+        carrusel.appendChild(img);
+      });
+
+      let current = 0;
+      const total = imagenes.length;
+      setInterval(() => {
+        const imgs = carrusel.querySelectorAll('img');
+        imgs[current].classList.remove('active');
+        current = (current + 1) % total;
+        imgs[current].
+::contentReference[oaicite:4]{index=4}
  
