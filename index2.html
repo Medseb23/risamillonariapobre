@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Detector de Risa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* Diseño general y optimizado para móviles verticales */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #74ABE2, #5563DE);
+      color: #fff;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 0.5em;
+    }
+
+    button {
+      font-size: 1.2em;
+      padding: 0.8em 1.5em;
+      border: none;
+      border-radius: 5px;
+      background-color: #FFD700;
+      color: #333;
+      cursor: pointer;
+      margin-bottom: 1em;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #FFC700;
+    }
+
+    #resultado {
+      font-size: 2em;
+      margin: 1em 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Detector de Risa</h1>
+  <button id="iniciar">Iniciar</button>
+  <div id="resultado">Presiona "Iniciar" y ríe...</div>
+
+  <script>
+    // Función para calcular la intensidad (RMS) de un buffer
+    function calcularRMS(buffer) {
+      let sum = 0;
+      for (let i = 0; i < buffer.length; i++) {
+        sum += buffer[i] * buffer[i];
+      }
+      return Math.sqrt(sum / buffer.length);
+    }
+
+    // Función de autocorrelación para obtener la frecuencia fundamental
+    function autoCorrelacion(buf, sampleRate) {
+      const SIZE = buf.length;
+      let rms = 0;
+      for (let i = 0; i < SIZE; i++) {
+        rms += buf[i] * buf[i];
+      }
+      rms = Math.sqrt(rms / SIZE);
+      // Si la señal es muy baja, no hay suficiente audio
+      if (rms < 0.01) return -1;
+
+      let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+      for (let i = 0; i < SIZE / 2; i++) {
+        if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+      }
+      for (let i = 1; i < SIZE / 2; i++) {
+        if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+      }
+      buf = buf.slice(r1, r2);
+      const newSize = buf.length;
+      if (newSize === 0) return -1;
+
+      let c = new Array(newSize).fill(0);
+      for (let i = 0; i < newSize; i++) {
+        for (let j = 0; j < newSize - i; j++) {
+          c[i] += buf[j] * buf[j + i];
+        }
+      }
+
+      let d = 0;
+      while (d < newSize - 1 && c[d] > c[d + 1]) d++;
+      let maxval = -1, maxpos = -1;
+      for (let i = d; i < newSize; i++) {
+        if (c[i] > maxval) {
+          maxval = c[i];
+          maxpos = i;
+        }
+      }
+      if (maxpos === 0) return -1;
+      return sampleRate / maxpos;
+    }
+
+    const boton = document.getElementById('iniciar');
+    const resultado = document.getElementById('resultado');
+
+    boton.onclick = async () => {
+      boton.disabled = true;
+      resultado.textContent = 'Escuchando...';
+
+      // Configurar el contexto de audio y obtener permisos
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        resultado.textContent = 'Error: Permiso de micrófono requerido.';
+        boton.disabled = false;
+        return;
+      }
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      const buffer = new Float32Array(analyser.fftSize);
+
+      // Array para almacenar los datos (pitch e intensidad)
+      const muestras = [];
+      // Duración de captura: 3 segundos (para agrupar varias carcajadas)
+      const duracion = 3000;
+      const intervalo = 100; // se muestrea cada 100ms
+
+      const intervalID = setInterval(() => {
+        analyser.getFloatTimeDomainData(buffer);
+        const pitch = autoCorrelacion(buffer, audioContext.sampleRate);
+        const intensidad = calcularRMS(buffer);
+        // Solo se guardan si se detecta una señal válida (pitch != -1)
+        if (pitch !== -1) {
+          muestras.push({ pitch, intensidad });
+        }
+      }, intervalo);
+
+      // Después de la duración de captura, procesamos las muestras
+      setTimeout(() => {
+        clearInterval(intervalID);
+
+        if (muestras.length === 0) {
+          // Si no se registró señal válida durante el período, se podría asumir "Pobre" (o dejar mensaje vacío)
+          resultado.textContent = '💸 Pobre';
+          boton.disabled = false;
+          return;
+        }
+
+        // Calcular la media y la desviación estándar de la frecuencia (pitch)
+        let sumaPitch = 0;
+        let sumaIntensidad = 0;
+        for (const muestra of muestras) {
+          sumaPitch += muestra.pitch;
+          sumaIntensidad += muestra.intensidad;
+        }
+        const avgPitch = sumaPitch / muestras.length;
+        const avgIntensidad = sumaIntensidad / muestras.length;
+
+        // Calcular desviación estándar de pitch
+        let sumaDiff = 0;
+        for (const muestra of muestras) {
+          sumaDiff += Math.pow(muestra.pitch - avgPitch, 2);
+        }
+        const stdPitch = Math.sqrt(sumaDiff / muestras.length);
+
+        // (Opcional) Contar "ráfagas" o eventos con intensidad alta
+        let countBursts = muestras.filter(m => m.intensidad > 0.05).length;
+
+        // Valores umbral basados en pruebas y estudios (valores "experimentales")
+        // Ajusta estos valores según sea necesario para tu entorno.
+        let veredicto = '';
+        if (avgPitch < 150 && avgIntensidad > 0.05 && stdPitch > 10 && countBursts >= 2) {
+          veredicto = '💰 Millonario';
+        } else {
+          veredicto = '💸 Pobre';
+        }
+
+        resultado.textContent = veredicto;
+        boton.disabled = false;
+      }, duracion + 1000); // 1 segundo extra después de los 3 segundos de captación
+    };
+  </script>
+</body>
+</html>
