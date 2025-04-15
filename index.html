@@ -3,23 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <title>Detector de Risa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-    #resultado { font-size: 2em; margin-top: 20px; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f0f0;
+    }
+    #resultado {
+      font-size: 2em;
+      margin: 20px 0;
+    }
+    #carrusel {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      height: 640px; /* 9:16 aspect ratio */
+      overflow: hidden;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    #carrusel img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+    #carrusel img.active {
+      opacity: 1;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <h1>Detector de Risa</h1>
   <button id="iniciar">Iniciar</button>
   <div id="resultado">Esperando...</div>
+  <div id="carrusel"></div>
 
   <script>
     const boton = document.getElementById('iniciar');
     const resultado = document.getElementById('resultado');
+    const carrusel = document.getElementById('carrusel');
+
+    const imagenesMillonario = [
+      'https://cdn.pixabay.com/photo/2015/03/26/09/54/rolls-royce-690832_1280.jpg',
+      'https://cdn.pixabay.com/photo/2016/11/29/04/17/mansion-1867187_1280.jpg',
+      'https://cdn.pixabay.com/photo/2015/01/08/18/27/yacht-593162_1280.jpg'
+    ];
+
+    const imagenesPobre = [
+      'https://cdn.pixabay.com/photo/2017/01/06/19/15/people-1957318_1280.jpg',
+      'https://cdn.pixabay.com/photo/2017/01/06/19/15/people-1957319_1280.jpg',
+      'https://cdn.pixabay.com/photo/2017/01/06/19/15/people-1957320_1280.jpg'
+    ];
 
     boton.onclick = async () => {
       boton.disabled = true;
       resultado.textContent = 'Escuchando...';
+      carrusel.innerHTML = '';
 
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -91,14 +144,24 @@
         }
         const suma = frecuencias.reduce((a, b) => a + b, 0);
         const promedio = suma / frecuencias.length;
+        let imagenes = [];
         if (promedio < 150) {
           resultado.textContent = '💰 Millonario';
+          imagenes = imagenesMillonario;
         } else {
           resultado.textContent = '💸 Pobre';
+          imagenes = imagenesPobre;
         }
+        mostrarCarrusel(imagenes);
         boton.disabled = false;
       }, duracion);
     };
-  </script>
-</body>
-</html>
+
+    function mostrarCarrusel(imagenes) {
+      carrusel.innerHTML = '';
+      imagenes.forEach((src, index) => {
+        const img = document.createElement('img');
+        img.src = src;
+        if (index
+::contentReference[oaicite:3]{index=3}
+ 
